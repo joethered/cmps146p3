@@ -4,7 +4,8 @@ import pickle
 import traceback
 import tkinter
 
-import p3_pathfinder
+from cmps146p3 import p3_pathfinder
+
 
 if len(sys.argv) != 4:
     print("usage: %s map.gif map.mesh.pickle subsample_factor" % sys.argv[0])
