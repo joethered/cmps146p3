@@ -1,13 +1,14 @@
 from math import inf, sqrt
 from heapq import heappop, heappush
 from turtledemo.chaos import line
+from _ast import Str
 
 
 
 def find_path(source_point,destination_point,mesh): #source_point is (x,y) pair, destination(x,y) pair , a data structure (fancy graph)
     path = []
     visited_nodes = []
-    print (mesh)    
+    #print (mesh)    
     for box in mesh['boxes']:
         
 
@@ -21,9 +22,9 @@ def find_path(source_point,destination_point,mesh): #source_point is (x,y) pair,
 
             
     
-    path = dijkstras_shortest_path(source_point, destination_point, mesh, navigation_edges, visited_nodes)    
-    print ("path: " + str(path))
-    print(visited_nodes)
+    path, visited_nodes = dijkstras_shortest_path(source_point, destination_point, mesh, navigation_edges, visited_nodes)    
+    #print ("path: " + str(path))
+    #print(visited_nodes)
     return (path , visited_nodes)  # path is a list of points like ((x1,y1),(x2,y2)). 
 # visited nodes = a list of boxes explored by your algorithm identified by their bounds (x1,x2,y1,y2) 
 
@@ -59,45 +60,73 @@ def dijkstras_shortest_path(initial_position, destination, graph, adj, visited_n
 
     while queue:
         # Continue with next min unvisited node
-        current_distance, current_node = heappop(queue)
-        print ("cur_node: " +str(current_node))
+        current_distance, current_box = heappop(queue)
+        print ("cur_node: " +str(current_box))
         
         # Early termination check: if the destination is found, return the path
-        if current_node == destination_box:
+        if current_box == destination_box:
             node = destination_box
-            path = [node]
+            path = []
+            detail_point = []
+            prev_point = initial_position
             while node is not None:
                 if previous_cell[node] != None:
                     line_end = (0,0)
                     line_start = (0,0)
                     if node == destination_box:
                         line_end = destination
+                        #prev_point = 
                     else:
-                        line_end = ((node[0] + node[1])/2,(node[2]+node[3])/2)
+                        #line_end = ((node[0] + node[1])/2,(node[2]+node[3])/2)
+                        line_end = next_point(prev_point, node, previous_cell[node])
                     if previous_cell[node] == initial_box:
                         line_start = initial_position
                     else:
-                        line_start = ((previous_cell[node][0] + previous_cell[node][1])/2, (previous_cell[node][2] + previous_cell[node][3])/2)
-                    print("Line start: " + str(line_start))
+                        #line_start = ((previous_cell[node][0] + previous_cell[node][1])/2, (previous_cell[node][2] + previous_cell[node][3])/2)
+                        if node == destination_box:
+                            line_start = next_point(prev_point, node, previous_cell[node])
+                        else:
+                            line_start = next_point(prev_point, previous_cell[node], previous_cell[previous_cell[node]])
+                        
+                        
+                        
+                    #print("Line start: " + str(line_start))
+                    #print("line end:" + str(line_end))
+                    #print("path: " + str(path))
+                    visited_nodes.append(node)
                     path.append((line_start,line_end))
+                    prev_point = line_end
                 node = previous_cell[node]
             print ("djtra: " + str(path))
 
-            return path[::-1]
+            return (path[::-1], visited_nodes) 
 
         # Calculate tentative distances to adjacent cells
-        for adjacent_node, edge_cost in adj(graph, current_node):
+        for adjacent_node, edge_cost in adj(graph, current_box):
             new_distance = current_distance + edge_cost
 
             if adjacent_node not in distances or new_distance < distances[adjacent_node]:
                 # Assign new distance and update link to previous cell
                 distances[adjacent_node] = new_distance
-                previous_cell[adjacent_node] = current_node
+                previous_cell[adjacent_node] = current_box
                 heappush(queue, (new_distance, adjacent_node))
                     
     # Failed to find a path
     print("Failed to find a path from", initial_position, "to", destination)
     return None
+
+def next_point(prev_point, current_box, destination_box):
+    print("prev: " +str(prev_point))
+    print("current_box: " + str(current_box))
+    print("destination_box: " + str(destination_box))
+    border_p1 =(max(current_box[0], destination_box[0]), max(current_box[2],destination_box[2]))
+    border_p2 =(min(current_box[1], destination_box[1]), min(current_box[3], destination_box[3]))
+    
+    mid_point = ((border_p2[0] + border_p1[0])/2, (border_p2[1] + border_p1[1])/2)
+    print ("midpoint: " + str(mid_point))
+    
+    return mid_point
+    
 
 def navigation_edges(mesh, cell):
     """ Provides a list of adjacent cells and their respective costs from the given cell.
