@@ -52,69 +52,107 @@ def dijkstras_shortest_path(initial_position, destination, graph, adj, visited_n
     """
     initial_box = find_box(initial_position, graph)
     destination_box = find_box(destination, graph)
-    distances = {initial_box: 0}           # Table of distances to cells 
-    previous_cell = {initial_box: None}    # Back links from cells to predecessors
-    queue = [(0, initial_box)]             # The heap/priority queue used
+    fwd_distances = {initial_box: 0}           # Table of fwd_distances to cells 
+    back_distances = {destination_box: 0}
+    fwd_previous_cell = {initial_box: None}    # Back links from cells to predecessors
+    back_previous_cell = {destination_box: None}
+    queue = [(0, initial_box, destination_box)]             # The heap/priority queue used
+    heappush(queue, (0, destination_box, initial_box))
 
     # Initial distance for starting position
-    distances[initial_position] = 0
+    fwd_distances[initial_position] = 0
+    back_distances[destination] = 0
+    last_checked_box = None
     
     while queue:
         # Continue with next min unvisited node
-        current_distance, current_box = heappop(queue)
-        print (current_distance == distances[current_box])
+        current_distance, current_box, current_direction = heappop(queue)
+        #print (current_distance == fwd_distances[current_box])
         #print ("cur_node: " +str(current_box))
         
         # Early termination check: if the destination is found, return the path
-        if current_box == destination_box:
-            node = destination_box
+        
+        if current_direction == destination_box and current_box == destination_box:
+
+            node1 = destination_box
+            node2 = initial_box
             path = []
             
-            prev_point = initial_position
-            while node is not None:
-                line_end = (0,0)
-                line_start = (0,0)
-                #print (str(initial_box) + " " + str(destination_box) + " " + str(previous_cell[node]))
-                if destination_box == initial_box:
-                    #print("single box")
-                    line_start = initial_position
-                    line_end = destination
-                elif previous_cell[node] != None or previous_cell[node] == initial_box:
-                    
-                    if node == destination_box:
-                        #print("destination box")
-                        line_start = destination
-                        line_end = next_point(destination, node, previous_cell[node])
-                    else:
-                        #print("the rest")
-                        line_start = prev_point
-                        line_end = next_point(prev_point, node, previous_cell[node])
-                else:
-                    #print("initial box")
-                    line_start = prev_point
-                    line_end = initial_position
-                    
-                visited_nodes.append(node)
-                path.append((line_start,line_end))
-                prev_point = line_end    
-                node = previous_cell[node]
+            prev_point1 = initial_position
+            prev_point2 = destination
+            
+            while node1 is not None:
+                
+                line1_start, line1_end = find_lines(initial_box, destination_box, initial_position, destination, node1, fwd_previous_cell, prev_point1)
+                  
+                visited_nodes.append(node1)
+                path.append((line1_start,line1_end))
+                prev_point1 = line1_end
+                node1 = fwd_previous_cell[node1]
+                
+            while node2 is not None:
+                line2_start, line2_end = find_lines(destination_box, initial_box, destination, initial_position, node2, back_previous_cell, prev_point2)
+                visited_nodes.append(node2)
+                path.append((line2_start,line2_end))
+                prev_point2 = line2_end 
+                node2 = back_previous_cell[node2]
             #print ("djtra: " + str(path))
             #print("path: " + str(path))
             return (path[::-1], visited_nodes) 
-
-        # Calculate tentative distances to adjacent cells
-        for adjacent_node, edge_cost in adj(graph, current_box):
-            new_distance = current_distance + heuristic(destination_box, adjacent_node)
-
-            if adjacent_node not in distances or new_distance < distances[adjacent_node]:
-                # Assign new distance and update link to previous cell
-                distances[adjacent_node] = new_distance
-                previous_cell[adjacent_node] = current_box
-                heappush(queue, (new_distance, adjacent_node))
+        # Calculate tentative fwd_distances to adjacent cells
+        if (current_direction == destination_box):
+            for adjacent_node, edge_cost in adj(graph, current_box):
+                new_distance = current_distance + heuristic(destination_box, adjacent_node)
+        
+                if adjacent_node not in fwd_distances or new_distance < fwd_distances[adjacent_node]:
+                    # Assign new distance and update link to previous cell
+                    fwd_distances[adjacent_node] = new_distance
+                    fwd_previous_cell[adjacent_node] = current_box
+                    heappush(queue, (new_distance, adjacent_node, destination_box))
+                    #visited_nodes.append(adjacent_node)
+    
+               
+        else:
+            for adjacent_node, edge_cost in adj(graph, current_box):
+                new_distance = current_distance + heuristic(initial_box, adjacent_node)
+        
+                if adjacent_node not in back_distances or new_distance < back_distances[adjacent_node]:
+                    # Assign new distance and update link to previous cell
+                    back_distances[adjacent_node] = new_distance
+                    back_previous_cell[adjacent_node] = current_box
+                    heappush(queue, (new_distance, adjacent_node, initial_box))
+                    #visited_nodes.append(adjacent_node)
                     
     # Failed to find a path
     print("Failed to find a path from", initial_position, "to", destination)
     return None
+
+def find_lines(initial_box, destination_box, initial_position, destination, node, previous_cell, prev_point):
+    line_end = (0,0)
+    line_start = (0,0)
+    #print (str(initial_box) + " " + str(destination_box) + " " + str(fwd_previous_cell[node]))
+    #print(fwd_previous_cell)
+    #print(node)
+    if destination_box == initial_box:
+        #print("single box")
+        line_start = initial_position
+        line_end = destination
+    elif previous_cell[node] != None or previous_cell[node] == initial_box:
+        
+        if node == destination_box:
+            #print("destination box")
+            line_start = destination
+            line_end = next_point(destination, node, previous_cell[node])
+        else:
+            #print("the rest")
+            line_start = prev_point
+            line_end = next_point(prev_point, node, previous_cell[node])
+    else:
+        #print("initial box")
+        line_start = prev_point
+        line_end = initial_position
+
+    return (line_start, line_end)
 
 def next_point(prev_point, current_box, destination_box):
     #print("prev: " +str(prev_point))

@@ -4,7 +4,7 @@ import pickle
 import traceback
 import tkinter
 
-import p3_pathfinder
+import p3_pathfinder_bidirectional
 
 
 if len(sys.argv) != 4:
@@ -79,7 +79,7 @@ def on_click(event):
     else:
         destination_point = event.y*SUBSAMPLE, event.x*SUBSAMPLE
         try:
-            path, visited_boxes = p3_pathfinder.find_path(source_point, destination_point, mesh)
+            path, visited_boxes = p3_pathfinder_bidirectional.find_path(source_point, destination_point, mesh)
         except:
             destination_point = None
             traceback.print_exc()
